@@ -1,7 +1,10 @@
 import enum
 import subprocess
+import time
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 from std_msgs.msg import Bool, String
 from ackermann_msgs.msg import AckermannDriveStamped
@@ -30,6 +33,7 @@ class CoordinatorNode(Node):
         self._centerline_path = ''
 
         self._state = PipelineState.IDLE
+        self._cb_group = ReentrantCallbackGroup()
 
         self._state_pub = self.create_publisher(String, 'coordinator/state', 10)
         self._raceline_pub = self.create_publisher(String, 'coordinator/current_raceline', 10)
@@ -41,12 +45,14 @@ class CoordinatorNode(Node):
             reliability=ReliabilityPolicy.RELIABLE,
         )
         self._converged_sub = self.create_subscription(
-            Bool, 'slam_monitor/converged', self._converged_callback, latched_qos)
+            Bool, 'slam_monitor/converged', self._converged_callback, latched_qos,
+            callback_group=self._cb_group)
         self._emergency_sub = self.create_subscription(
-            Bool, 'safety_monitor/emergency', self._emergency_callback, 10)
+            Bool, 'safety_monitor/emergency', self._emergency_callback, 10,
+            callback_group=self._cb_group)
 
         self._wall_follower_client = self.create_client(
-            SetActive, 'wall_follower/set_active')
+            SetActive, 'wall_follower/set_active', callback_group=self._cb_group)
         self._save_map_client = self.create_client(
             SaveMap, 'slam_monitor/save_map')
         self._process_map_client = self.create_client(
@@ -65,9 +71,13 @@ class CoordinatorNode(Node):
                     f'{name} not available at startup — will retry on use')
 
         self.create_timer(0.1, self._initial_transition)
+        # Transition immediately from IDLE to EXPLORE
+        self._initial_timer = self.create_timer(
+            0.1, self._initial_transition, callback_group=self._cb_group)
 
     def _initial_transition(self):
         self._initial_timer = None
+        self._initial_timer.cancel()
         self._transition_to_explore()
 
     def _publish_state(self, state: PipelineState):
@@ -97,10 +107,12 @@ class CoordinatorNode(Node):
             self.get_logger().error(f'Service {client.srv_name} not available')
             return None, False
         future = client.call_async(request)
-        rclpy.spin_until_future_complete(self, future, timeout_sec=timeout)
-        if future.result() is None:
-            self.get_logger().error(f'Service {client.srv_name} timed out')
-            return None, False
+        deadline = time.monotonic() + timeout
+        while not future.done():
+            if time.monotonic() > deadline:
+                self.get_logger().error(f'Service {client.srv_name} timed out')
+                return None, False
+            time.sleep(0.005)
         return future.result(), True
 
     # ------------------------------------------------------------------
@@ -256,9 +268,13 @@ class CoordinatorNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = CoordinatorNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+    try:
+        executor.spin()
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

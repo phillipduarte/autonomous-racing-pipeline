@@ -32,12 +32,12 @@ private:
     double time_gap = 0.0;
 
     // ===== Wall follow =====
-    double dist_wall = 1.0;
+    double dist_wall = 0.5;
     double L = 1.0;
     double alpha = 0.0;
 
     // ===== Corner handling =====
-    double CORNER_DIFF_THRESH = -0.3;
+    double CORNER_DIFF_THRESH = -0.1;
     double FRONT_NEED_FOR_TURN = 1.2;
     double TURN_STEER = 0.6;
 
@@ -134,7 +134,7 @@ private:
         bool is_corner = (diff > CORNER_DIFF_THRESH) && (dist_front < FRONT_NEED_FOR_TURN);
 
         // ===== Velocity =====
-        double velocity = (std::abs(alpha) < M_PI/18) ? 1.5 : 0.8;
+        double velocity = (std::abs(alpha) < M_PI/18) ? 0.5 : 0.5;
 
         // ===== Behavior =====
         if (is_corner) {

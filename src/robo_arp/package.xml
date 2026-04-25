@@ -15,4 +15,8 @@
   <depend>ackermann_msgs</depend>
   <depend>slam_toolbox</depend>
   <depend>robo_arp_interfaces</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 </package>
