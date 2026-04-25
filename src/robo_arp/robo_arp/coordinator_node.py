@@ -1,4 +1,5 @@
 import enum
+import subprocess
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
@@ -71,6 +72,17 @@ class CoordinatorNode(Node):
         stop.drive.steering_angle = 0.0
         self._drive_pub.publish(stop)
 
+    def kill_node(self, node_name):
+        result = subprocess.run(
+            ['ros2', 'node', 'kill', node_name],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            self.get_logger().info(f'Stopped node {node_name}')
+        else:
+            self.get_logger().warn(
+                f'Could not stop {node_name} (may already be stopped): {result.stderr.strip()}')
+
     def call_service_sync(self, client, request, timeout=5.0):
         if not client.wait_for_service(timeout_sec=timeout):
             self.get_logger().error(f'Service {client.srv_name} not available')
@@ -141,8 +153,10 @@ class CoordinatorNode(Node):
             return
         self._state = PipelineState.DONE
         self._publish_state(PipelineState.DONE)
+        self.kill_node('/slam_toolbox')
+        self.kill_node('/wall_follower')
         self.get_logger().info(
-            f'Phase 1 complete. Map at: {map_path}. Ready for Phase 2.')
+            f'Phase 1 complete. Map at: {map_path}. slam_toolbox and wall_follower stopped.')
 
     def _emergency_callback(self, msg: Bool):
         if not msg.data:
@@ -162,7 +176,8 @@ class CoordinatorNode(Node):
         self.call_service_sync(self._wall_follower_client, req)
 
         self._publish_stop()
-
+        self.kill_node('/slam_toolbox')
+        self.kill_node('/wall_follower')
         self.get_logger().error(
             'Emergency stop triggered — cross-track error exceeded threshold')
 
