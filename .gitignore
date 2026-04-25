@@ -1,0 +1,49 @@
+# ROS2 / colcon build artifacts
+build/
+install/
+log/
+
+# Generated ROS2 interface code (produced by rosidl)
+devel/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+.eggs/
+*.egg
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+_deps/
+
+# Map output files (generated at runtime by slam_toolbox)
+*.pgm
+*.pbm
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
