@@ -1,0 +1,8 @@
+# Request
+string map_path   # full path to write the .pgm and .yaml files, e.g. /tmp/map
+---
+# Response
+bool success
+string message    # human-readable status or error
+string pgm_path   # actual path written, e.g. /tmp/map.pgm
+string yaml_path  # actual path written, e.g. /tmp/map.yaml

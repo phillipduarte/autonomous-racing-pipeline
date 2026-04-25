@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>robo_arp_interfaces</name>
+  <version>0.0.1</version>
+  <description>Custom interfaces for ESE6150 racing pipeline</description>
+  <maintainer email="todo@seas.upenn.edu">todo</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rosidl_default_generators</depend>
+  <member_of_group>rosidl_interface_packages</member_of_group>
+  <exec_depend>rosidl_default_runtime</exec_depend>
+</package>

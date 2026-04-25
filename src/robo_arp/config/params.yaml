@@ -1,0 +1,15 @@
+coordinator_node:
+  ros__parameters:
+    explore_wall_follow_speed: 1.5        # m/s, passed to wall follower during explore
+
+slam_monitor_node:
+  ros__parameters:
+    stability_threshold_m2: 0.05          # max map area delta (m²) to count as stable
+    stable_frames_required: 10            # consecutive stable frames before convergence
+    min_map_area_m2: 2.0                  # map must be at least this large (sanity check)
+    map_save_path: "/tmp/robo_arp_map"    # written as /tmp/robo_arp_map.pgm + .yaml
+
+safety_monitor_node:
+  ros__parameters:
+    cross_track_error_threshold: 0.4      # meters; triggers emergency if exceeded
+    check_rate_hz: 20.0

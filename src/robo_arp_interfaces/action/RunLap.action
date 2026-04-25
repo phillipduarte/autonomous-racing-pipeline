@@ -1,0 +1,12 @@
+# Goal
+string raceline_path    # path to raceline CSV file
+int32 max_laps          # how many laps to run (0 = unlimited)
+---
+# Result
+float32 lap_time        # time of the last completed lap in seconds
+int32 laps_completed
+bool crashed
+---
+# Feedback
+float32 current_lap_time    # elapsed time on current lap
+float32 progress            # 0.0 to 1.0, fraction of lap complete

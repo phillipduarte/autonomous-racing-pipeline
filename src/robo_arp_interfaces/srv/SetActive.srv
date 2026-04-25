@@ -1,0 +1,6 @@
+# Request: used to start or stop a controller node publishing to /drive
+bool active
+---
+# Response
+bool success
+string message
