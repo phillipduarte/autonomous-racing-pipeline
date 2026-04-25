@@ -161,6 +161,12 @@ class CoordinatorNode(Node):
             return
         self._state = PipelineState.DONE
         self._publish_state(PipelineState.DONE)
+
+        # TODO: Stop car safely, and then record baseline/odom from slam
+        # Then, when we transition to next phase, we pass in this position
+        # as starting position in particle filter before we let the car
+        # start driving again.
+
         self.kill_node('/slam_toolbox')
         self.kill_node('/wall_follower')
         self.get_logger().info(
