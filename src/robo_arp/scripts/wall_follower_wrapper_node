@@ -1,0 +1,3 @@
+#!/usr/bin/env python3
+from robo_arp.wall_follower_wrapper_node import main
+main()

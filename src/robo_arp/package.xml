@@ -5,7 +5,8 @@
   <description>ESE6150 autonomous racing pipeline</description>
   <maintainer email="pmduarte@seas.upenn.edu">Phillip Duarte</maintainer>
   <license>MIT</license>
-  <buildtool_depend>ament_python</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
   <depend>nav_msgs</depend>
