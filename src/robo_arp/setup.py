@@ -16,6 +16,8 @@ setup(
             glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'config'),
             glob('config/*.yaml')),
+        (os.path.join('share', package_name, 'scripts'),
+            glob('scripts/*.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -25,6 +27,8 @@ setup(
             'slam_monitor_node = robo_arp.slam_monitor_node:main',
             'safety_monitor_node = robo_arp.safety_monitor_node:main',
             'wall_follower_wrapper_node = robo_arp.wall_follower_wrapper_node:main',
+            'map_processor_node = robo_arp.map_processor_node:main',
+            'pure_pursuit_node = robo_arp.pure_pursuit_node:main',
         ],
     },
 )

@@ -1,0 +1,8 @@
+# Request
+string pgm_path     # path to map .pgm file e.g. /tmp/robo_arp_map.pgm
+                    # the node derives map_base by stripping .pgm extension
+---
+# Response
+bool success
+string message           # human-readable status or error
+string centerline_path   # auto-derived: {map_base}_centerline.csv

@@ -10,6 +10,11 @@ def generate_launch_description():
         'config', 'params.yaml'
     )
 
+    centerline_script = os.path.join(
+        get_package_share_directory('robo_arp'),
+        'scripts', 'generate_centerline.py'
+    )
+
     return LaunchDescription([
 
         # slam_toolbox — runs the whole time
@@ -59,6 +64,23 @@ def generate_launch_description():
             package='robo_arp',
             executable='coordinator_node',
             name='coordinator_node',
+            parameters=[config],
+            output='screen',
+        ),
+        Node(
+            package='robo_arp',
+            executable='map_processor_node',
+            name='map_processor_node',
+            parameters=[
+                config,
+                {'centerline_script_path': centerline_script},
+            ],
+            output='screen',
+        ),
+        Node(
+            package='robo_arp',
+            executable='pure_pursuit_node',
+            name='pure_pursuit_node',
             parameters=[config],
             output='screen',
         ),

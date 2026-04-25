@@ -13,3 +13,14 @@ safety_monitor_node:
   ros__parameters:
     cross_track_error_threshold: 0.4      # meters; triggers emergency if exceeded
     check_rate_hz: 20.0
+
+map_processor_node:
+  ros__parameters:
+    centerline_script_path: ""            # MUST be set at launch — overridden in launch file
+
+pure_pursuit_node:
+  ros__parameters:
+    raceline_path: ""                     # set dynamically via coordinator/current_raceline
+    lookahead_distance: 0.8               # meters — tune on hardware
+    speed: 1.5                            # m/s — conservative for first centerline test
+    wheelbase: 0.33                       # F1TENTH wheelbase in meters
