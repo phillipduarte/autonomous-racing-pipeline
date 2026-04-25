@@ -1,13 +1,17 @@
 import enum
+import math
 import subprocess
 import time
 import rclpy
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.duration import Duration
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 from std_msgs.msg import Bool, String
 from ackermann_msgs.msg import AckermannDriveStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped
+import tf2_ros
 from robo_arp_interfaces.srv import SetActive, SaveMap, ProcessMap
 
 
@@ -35,9 +39,17 @@ class CoordinatorNode(Node):
         self._state = PipelineState.IDLE
         self._cb_group = ReentrantCallbackGroup()
 
+        self._initial_pose = None  # (x, y, yaw) captured from SLAM TF before kill
+        self._pf_proc = None       # Popen handle for particle filter process
+
+        self._tf_buffer = tf2_ros.Buffer()
+        self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
+
         self._state_pub = self.create_publisher(String, 'coordinator/state', 10)
         self._raceline_pub = self.create_publisher(String, 'coordinator/current_raceline', 10)
         self._drive_pub = self.create_publisher(AckermannDriveStamped, '/drive', 10)
+        self._initialpose_pub = self.create_publisher(
+            PoseWithCovarianceStamped, '/initialpose', 10)
 
         latched_qos = QoSProfile(
             depth=1,
@@ -185,6 +197,29 @@ class CoordinatorNode(Node):
         self._state = PipelineState.PLANNING
         self._publish_state(PipelineState.PLANNING)
 
+        # Stop the car and wait for it to settle before reading TF
+        self._publish_stop()
+        time.sleep(0.5)
+
+        # Capture map→base_link pose from SLAM TF before killing the toolbox
+        try:
+            tf = self._tf_buffer.lookup_transform(
+                'map', 'base_link', rclpy.time.Time(),
+                timeout=Duration(seconds=1.0))
+            tx = tf.transform.translation.x
+            ty = tf.transform.translation.y
+            q = tf.transform.rotation
+            yaw = math.atan2(
+                2.0 * (q.w * q.z + q.x * q.y),
+                1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+            self._initial_pose = (tx, ty, yaw)
+            self.get_logger().info(
+                f'Captured PF init pose: ({tx:.2f}, {ty:.2f}, {math.degrees(yaw):.1f}°)')
+        except Exception as e:
+            self.get_logger().warn(
+                f'TF lookup failed — PF will use global init: {e}')
+            self._initial_pose = None
+
         self.kill_node('/slam_toolbox')
         self.kill_node('/wall_follower')
 
@@ -218,6 +253,29 @@ class CoordinatorNode(Node):
         raceline_msg = String()
         raceline_msg.data = self._centerline_path
         self._raceline_pub.publish(raceline_msg)
+
+        # Launch particle filter against the map saved during the SAVING phase
+        self._pf_proc = subprocess.Popen([
+            'ros2', 'launch', 'particle_filter', 'localize_launch.py',
+            f'map_yaml:={self._map_yaml_path}',
+        ])
+        self.get_logger().info('Particle filter launched, waiting for startup...')
+        time.sleep(3.0)
+
+        # Seed the particle filter with the pose captured just before SLAM was killed
+        if self._initial_pose is not None:
+            x, y, yaw = self._initial_pose
+            pose_msg = PoseWithCovarianceStamped()
+            pose_msg.header.frame_id = 'map'
+            pose_msg.header.stamp = self.get_clock().now().to_msg()
+            pose_msg.pose.pose.position.x = x
+            pose_msg.pose.pose.position.y = y
+            cy, sy = math.cos(yaw * 0.5), math.sin(yaw * 0.5)
+            pose_msg.pose.pose.orientation.w = cy
+            pose_msg.pose.pose.orientation.z = sy
+            self._initialpose_pub.publish(pose_msg)
+            self.get_logger().info('Initial pose published to /initialpose')
+            time.sleep(0.5)
 
         req = SetActive.Request()
         req.active = True
@@ -262,6 +320,9 @@ class CoordinatorNode(Node):
         self._publish_stop()
         self.kill_node('/slam_toolbox')
         self.kill_node('/wall_follower')
+        if self._pf_proc is not None and self._pf_proc.poll() is None:
+            self._pf_proc.terminate()
+            self._pf_proc = None
         self.get_logger().error('Emergency stop triggered')
 
 

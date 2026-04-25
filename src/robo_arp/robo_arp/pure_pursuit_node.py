@@ -3,7 +3,7 @@ import math
 
 import rclpy
 from rclpy.node import Node
-from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
 from ackermann_msgs.msg import AckermannDriveStamped
 
@@ -31,7 +31,7 @@ class PurePursuitNode(Node):
 
         self._drive_pub = self.create_publisher(AckermannDriveStamped, '/drive', 10)
 
-        self.create_subscription(Odometry, '/ego_racecar/odom', self._odom_cb, 10)
+        self.create_subscription(PoseStamped, '/pf/viz/inferred_pose', self._odom_cb, 10)
         self.create_subscription(String, 'coordinator/current_raceline', self._raceline_cb, 10)
 
         self.create_service(SetActive, 'pure_pursuit/set_active', self._set_active_handler)
@@ -43,10 +43,10 @@ class PurePursuitNode(Node):
     # ------------------------------------------------------------------
     # Subscriptions
 
-    def _odom_cb(self, msg: Odometry):
-        self._x = msg.pose.pose.position.x
-        self._y = msg.pose.pose.position.y
-        q = msg.pose.pose.orientation
+    def _odom_cb(self, msg: PoseStamped):
+        self._x = msg.pose.position.x
+        self._y = msg.pose.position.y
+        q = msg.pose.orientation
         siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
         cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
         self._yaw = math.atan2(siny_cosp, cosy_cosp)

@@ -2,7 +2,7 @@ import math
 import csv
 import rclpy
 from rclpy.node import Node
-from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Bool, Float32, String
 
 
@@ -25,15 +25,15 @@ class SafetyMonitorNode(Node):
         self._emergency_pub = self.create_publisher(Bool, 'safety_monitor/emergency', 10)
 
         self._odom_sub = self.create_subscription(
-            Odometry, '/ego_racecar/odom', self._odom_callback, 10)
+            PoseStamped, '/pf/viz/inferred_pose', self._odom_callback, 10)
         self._raceline_sub = self.create_subscription(
             String, 'coordinator/current_raceline', self._raceline_callback, 10)
 
         self._timer = self.create_timer(1.0 / self._check_rate_hz, self._check_cte)
 
-    def _odom_callback(self, msg: Odometry):
-        self._current_x = msg.pose.pose.position.x
-        self._current_y = msg.pose.pose.position.y
+    def _odom_callback(self, msg: PoseStamped):
+        self._current_x = msg.pose.position.x
+        self._current_y = msg.pose.position.y
         self._odom_received = True
 
     def _raceline_callback(self, msg: String):
