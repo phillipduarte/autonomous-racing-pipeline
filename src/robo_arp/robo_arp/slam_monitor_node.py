@@ -1,3 +1,4 @@
+import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
@@ -47,7 +48,7 @@ class SlamMonitorNode(Node):
 
     def _map_callback(self, msg: OccupancyGrid):
         resolution = msg.info.resolution
-        free_cells = sum(1 for v in msg.data if v == 0)
+        free_cells = int(np.count_nonzero(np.asarray(msg.data, dtype=np.int8) == 0))
         area = free_cells * resolution * resolution
 
         delta = abs(area - self._previous_area)
