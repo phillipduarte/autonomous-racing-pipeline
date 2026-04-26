@@ -7,8 +7,11 @@ slam_toolbox:
 
     odom_frame: odom
     map_frame: map
-    base_frame: base_link
+    base_frame: laser
     scan_topic: /scan
+    message_filter_queue_size: 100
+    transform_timeout: 0.5
+    tf_buffer_duration: 30.0
     use_map_saver: false
     mode: mapping
 

@@ -29,9 +29,18 @@ def generate_launch_description():
         ),
 
         # wall follower — remapped so wrapper gates its output
+        #Node(
+        #    package='wall_follow_arp',
+         #   executable='wall_follow_node',
+          #  name='wall_follow',
+           # remappings=[('/drive', '/drive_raw')],
+            #output='screen',
+        #),
+
+        # wall follower — remapped so wrapper gates its output
         Node(
-            package='wall_follow_arp',
-            executable='wall_follow_node',
+            package='wall_follow',
+            executable='wall_follow_node3',
             name='wall_follow',
             remappings=[('/drive', '/drive_raw')],
             output='screen',

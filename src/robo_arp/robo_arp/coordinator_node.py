@@ -82,14 +82,12 @@ class CoordinatorNode(Node):
                 self.get_logger().warn(
                     f'{name} not available at startup — will retry on use')
 
-        self.create_timer(0.1, self._initial_transition)
-        # Transition immediately from IDLE to EXPLORE
         self._initial_timer = self.create_timer(
             0.1, self._initial_transition, callback_group=self._cb_group)
 
     def _initial_transition(self):
-        self._initial_timer = None
         self._initial_timer.cancel()
+        self._initial_timer = None
         self._transition_to_explore()
 
     def _publish_state(self, state: PipelineState):

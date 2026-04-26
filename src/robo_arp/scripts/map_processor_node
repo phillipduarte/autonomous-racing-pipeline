@@ -1,0 +1,3 @@
+#!/usr/bin/env python3
+from robo_arp.map_processor_node import main
+main()

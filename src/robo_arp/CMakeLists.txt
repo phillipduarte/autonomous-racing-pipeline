@@ -13,6 +13,8 @@ install(PROGRAMS
   scripts/slam_monitor_node
   scripts/safety_monitor_node
   scripts/wall_follower_wrapper_node
+  scripts/map_processor_node
+  scripts/pure_pursuit_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

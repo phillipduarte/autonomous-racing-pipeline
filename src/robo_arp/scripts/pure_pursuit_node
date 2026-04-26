@@ -1,0 +1,3 @@
+#!/usr/bin/env python3
+from robo_arp.pure_pursuit_node import main
+main()
