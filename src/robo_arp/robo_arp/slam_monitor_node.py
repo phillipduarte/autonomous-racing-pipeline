@@ -1,6 +1,9 @@
+import time
 import numpy as np
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 from nav_msgs.msg import OccupancyGrid
 from std_msgs.msg import Bool, Float32
@@ -26,6 +29,8 @@ class SlamMonitorNode(Node):
         self._stable_count = 0
         self._already_converged = False
 
+        self._cb_group = ReentrantCallbackGroup()
+
         latched_qos = QoSProfile(
             depth=1,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
@@ -36,12 +41,15 @@ class SlamMonitorNode(Node):
         self._area_pub = self.create_publisher(Float32, 'slam_monitor/map_area', 10)
 
         self._map_sub = self.create_subscription(
-            OccupancyGrid, '/map', self._map_callback, 10)
+            OccupancyGrid, '/map', self._map_callback, 10,
+            callback_group=self._cb_group)
 
         self._save_map_srv = self.create_service(
-            SaveMap, 'slam_monitor/save_map', self._save_map_handler)
+            SaveMap, 'slam_monitor/save_map', self._save_map_handler,
+            callback_group=self._cb_group)
 
-        self._slam_save_client = self.create_client(SlamSaveMap, '/slam_toolbox/save_map')
+        self._slam_save_client = self.create_client(
+            SlamSaveMap, '/slam_toolbox/save_map', callback_group=self._cb_group)
         if not self._slam_save_client.wait_for_service(timeout_sec=10.0):
             self.get_logger().warn(
                 '/slam_toolbox/save_map service not available at startup — will retry on request')
@@ -52,8 +60,16 @@ class SlamMonitorNode(Node):
         area = free_cells * resolution * resolution
 
         delta = abs(area - self._previous_area)
+
+        self.get_logger().info(
+            f'Received map: area={area:.2f}m², delta={delta:.2f}m²')
+
         if delta < self._stability_threshold:
             self._stable_count += 1
+            self.get_logger().info(
+                f'Map stable frame logged: delta={delta:.2f}, '
+                f'stable for stable_count={self._stable_count} frames, '
+                f'need {self._stable_frames_required} for convergence')
         else:
             self._stable_count = 0
         self._previous_area = area
@@ -82,12 +98,16 @@ class SlamMonitorNode(Node):
             return response
 
         slam_req = SlamSaveMap.Request()
-        slam_req.name = map_path
+        slam_req.name.data = map_path
 
         future = self._slam_save_client.call_async(slam_req)
-        rclpy.spin_until_future_complete(self, future, timeout_sec=10.0)
+        deadline = time.monotonic() + 10.0
+        while not future.done():
+            if time.monotonic() > deadline:
+                break
+            time.sleep(0.005)
 
-        if future.result() is None:
+        if not future.done() or future.result() is None:
             response.success = False
             response.message = 'slam_toolbox save_map call timed out'
             return response
@@ -103,9 +123,13 @@ class SlamMonitorNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = SlamMonitorNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+    try:
+        executor.spin()
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':
