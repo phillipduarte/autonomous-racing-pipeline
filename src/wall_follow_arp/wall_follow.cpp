@@ -32,7 +32,7 @@ private:
     double time_gap = 0.0;
 
     // ===== Wall follow =====
-    double dist_wall = 0.5;
+    double dist_wall = 1.0;
     double L = 1.0;
     double alpha = 0.0;
 
