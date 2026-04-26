@@ -12,8 +12,9 @@ slam_toolbox:
     message_filter_queue_size: 100
     transform_timeout: 0.5
     tf_buffer_duration: 30.0
-    use_map_saver: false
+    use_map_saver: true
     mode: mapping
+    throttle_scans: 2
 
     # Scan matching
     minimum_travel_distance: 0.3      # meters between scan insertions
