@@ -102,15 +102,16 @@ class CoordinatorNode(Node):
         self._drive_pub.publish(stop)
 
     def kill_node(self, node_name):
+        pattern = f'__node:={node_name.lstrip("/")}'
         result = subprocess.run(
-            ['ros2', 'node', 'kill', node_name],
+            ['pkill', '-TERM', '-f', pattern],
             capture_output=True, text=True
         )
         if result.returncode == 0:
             self.get_logger().info(f'Stopped node {node_name}')
         else:
             self.get_logger().warn(
-                f'Could not stop {node_name} (may already be stopped): {result.stderr.strip()}')
+                f'Could not stop {node_name} (may already be stopped)')
 
     def call_service_sync(self, client, request, timeout=5.0):
         if not client.wait_for_service(timeout_sec=timeout):
