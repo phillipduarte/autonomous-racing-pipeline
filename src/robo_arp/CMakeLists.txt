@@ -15,6 +15,7 @@ install(PROGRAMS
   scripts/wall_follower_wrapper_node
   scripts/map_processor_node
   scripts/pure_pursuit_node
+  scripts/generate_centerline.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
