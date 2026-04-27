@@ -108,7 +108,9 @@ class PurePursuitNode(Node):
             if not rows:
                 self.get_logger().error(f'Raceline CSV is empty: {path}')
                 return False
-            # Support both x_m/y_m (from generate_centerline.py) and x/y column names
+            # Strip leading comment characters from column names (TUM CSV uses "# x_m,...")
+            rows = [{k.lstrip('# '): v for k, v in r.items()} for r in rows]
+            # Support both x_m/y_m (from extract_centerline/generate_centerline) and x/y
             if 'x_m' in rows[0] and 'y_m' in rows[0]:
                 self._path = [(float(r['x_m']), float(r['y_m'])) for r in rows]
             elif 'x' in rows[0] and 'y' in rows[0]:
