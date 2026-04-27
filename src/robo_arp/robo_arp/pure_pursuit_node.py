@@ -3,7 +3,9 @@ import math
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped
+from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
+from geometry_msgs.msg import PoseStamped, PointStamped
+from nav_msgs.msg import Path
 from std_msgs.msg import String
 from ackermann_msgs.msg import AckermannDriveStamped
 
@@ -30,6 +32,14 @@ class PurePursuitNode(Node):
         self._odom_received = False
 
         self._drive_pub = self.create_publisher(AckermannDriveStamped, '/drive', 10)
+        self._lookahead_pub = self.create_publisher(PointStamped, 'pure_pursuit/lookahead_point', 10)
+
+        latched_qos = QoSProfile(
+            depth=1,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            reliability=ReliabilityPolicy.RELIABLE,
+        )
+        self._path_pub = self.create_publisher(Path, 'pure_pursuit/path', latched_qos)
 
         self.create_subscription(PoseStamped, '/pf/viz/inferred_pose', self._odom_cb, 10)
         self.create_subscription(String, 'coordinator/current_raceline', self._raceline_cb, 10)
@@ -107,10 +117,23 @@ class PurePursuitNode(Node):
                 self.get_logger().error(
                     f'CSV has no x/y or x_m/y_m columns. Headers: {list(rows[0].keys())}')
                 return False
+            self._publish_path()
             return True
         except Exception as e:
             self.get_logger().error(f'Error loading raceline {path}: {e}')
             return False
+
+    def _publish_path(self):
+        msg = Path()
+        msg.header.frame_id = 'map'
+        msg.header.stamp = self.get_clock().now().to_msg()
+        for x, y in self._path:
+            ps = PoseStamped()
+            ps.header = msg.header
+            ps.pose.position.x = x
+            ps.pose.position.y = y
+            msg.poses.append(ps)
+        self._path_pub.publish(msg)
 
     # ------------------------------------------------------------------
     # Control loop
@@ -126,6 +149,13 @@ class PurePursuitNode(Node):
         goal = self._find_lookahead_point(lookahead)
         if goal is None:
             return
+
+        pt = PointStamped()
+        pt.header.frame_id = 'map'
+        pt.header.stamp = self.get_clock().now().to_msg()
+        pt.point.x = goal[0]
+        pt.point.y = goal[1]
+        self._lookahead_pub.publish(pt)
 
         # Transform goal to vehicle frame
         dx = goal[0] - self._x
