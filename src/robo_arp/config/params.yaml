@@ -4,8 +4,8 @@ coordinator_node:
 
 slam_monitor_node:
   ros__parameters:
-    stability_threshold_m2: 2.0         # max map area delta (m²) to count as stable
-    stable_frames_required: 1            # consecutive stable frames before convergence
+    stability_threshold_m2: 1.5         # max map area delta (m²) to count as stable
+    stable_frames_required: 1           # consecutive stable frames before convergence
     min_map_area_m2: 2.0                  # map must be at least this large (sanity check)
     map_save_path: "/tmp/robo_arp_map"    # written as /tmp/robo_arp_map.pgm + .yaml
 
