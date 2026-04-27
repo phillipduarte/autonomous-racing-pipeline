@@ -20,6 +20,11 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# Install scripts into share so nodes can locate them by path
+install(DIRECTORY scripts/
+  DESTINATION share/${PROJECT_NAME}/scripts
+)
+
 # Install launch files
 install(DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}/launch
