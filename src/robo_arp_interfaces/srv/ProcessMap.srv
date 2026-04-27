@@ -1,6 +1,8 @@
 # Request
 string pgm_path     # path to map .pgm file e.g. /tmp/robo_arp_map.pgm
                     # the node derives map_base by stripping .pgm extension
+float64 seed_x      # robot position in map-frame meters (0.0 = no seed)
+float64 seed_y
 ---
 # Response
 bool success

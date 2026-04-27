@@ -227,6 +227,14 @@ class CoordinatorNode(Node):
 
         proc_req = ProcessMap.Request()
         proc_req.pgm_path = self._map_pgm_path
+        if self._initial_pose is not None:
+            proc_req.seed_x = self._initial_pose[0]
+            proc_req.seed_y = self._initial_pose[1]
+            self.get_logger().info(
+                f'Centerline seed (map frame): '
+                f'x={proc_req.seed_x:.3f}m, y={proc_req.seed_y:.3f}m')
+        else:
+            self.get_logger().warn('No initial pose — centerline will run without seed')
         proc_resp, ok = self.call_service_sync(
             self._process_map_client, proc_req, timeout=90.0)
 
