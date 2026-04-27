@@ -31,6 +31,9 @@ private:
     double prev_time = 0.0;
     double time_gap = 0.0;
 
+    double steer_deadband = 1.0; // rad — changes smaller than this are suppressed
+    double prev_steer = 0.0;
+
     // ===== Wall follow =====
     double dist_wall = 1.0;
     double L = 1.0;
@@ -95,12 +98,16 @@ private:
 
         prev_error = error;
 
+        double steer = -angle;
+        if (std::abs(angle) < steer_deadband)
+            steer = 0;
+
         ackermann_msgs::msg::AckermannDriveStamped msg;
         msg.header.stamp = this->now();
         msg.header.frame_id = "base_link";
 
         msg.drive.speed = velocity;
-        msg.drive.steering_angle = -angle;
+        msg.drive.steering_angle = steer;
 
         drive_pub->publish(msg);
     }
@@ -131,10 +138,10 @@ private:
 
         // ===== Corner detection =====
         double diff = std::abs(dist_left90 - dist_left45);
-        bool is_corner = (diff > CORNER_DIFF_THRESH) && (dist_front < FRONT_NEED_FOR_TURN);
+        bool is_corner = (diff > CORNER_DIFF_THRESH) && (dist_front < FRONT_NEED_FOR_TURN) && (get_range(ranges, M_PI_2) < 1.2);
 
         // ===== Velocity =====
-        double velocity = (std::abs(alpha) < M_PI/18) ? 0.5 : 0.5;
+        double velocity = (std::abs(alpha) < M_PI/18) ? 1.0 : 0.5;
 
         // ===== Behavior =====
         if (is_corner) {
