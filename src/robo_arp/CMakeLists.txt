@@ -16,6 +16,7 @@ install(PROGRAMS
   scripts/map_processor_node
   scripts/pure_pursuit_node
   scripts/generate_centerline.py
+  scripts/extract_centerline.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

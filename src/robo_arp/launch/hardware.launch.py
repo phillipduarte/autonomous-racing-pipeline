@@ -12,7 +12,7 @@ def generate_launch_description():
 
     centerline_script = os.path.join(
         get_package_share_directory('robo_arp'),
-        'scripts', 'generate_centerline.py'
+        'scripts', 'extract_centerline.py'
     )
 
     return LaunchDescription([
