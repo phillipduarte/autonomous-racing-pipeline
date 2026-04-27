@@ -1,4 +1,4 @@
-import time
+import os
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -8,7 +8,6 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 from nav_msgs.msg import OccupancyGrid
 from std_msgs.msg import Bool, Float32
 from robo_arp_interfaces.srv import SaveMap
-from slam_toolbox.srv import SaveMap as SlamSaveMap
 
 
 class SlamMonitorNode(Node):
@@ -28,6 +27,7 @@ class SlamMonitorNode(Node):
         self._previous_area = 0.0
         self._stable_count = 0
         self._already_converged = False
+        self._last_map: OccupancyGrid = None
 
         self._cb_group = ReentrantCallbackGroup()
 
@@ -48,13 +48,8 @@ class SlamMonitorNode(Node):
             SaveMap, 'slam_monitor/save_map', self._save_map_handler,
             callback_group=self._cb_group)
 
-        self._slam_save_client = self.create_client(
-            SlamSaveMap, '/slam_toolbox/save_map', callback_group=self._cb_group)
-        if not self._slam_save_client.wait_for_service(timeout_sec=10.0):
-            self.get_logger().warn(
-                '/slam_toolbox/save_map service not available at startup — will retry on request')
-
     def _map_callback(self, msg: OccupancyGrid):
+        self._last_map = msg
         resolution = msg.info.resolution
         free_cells = int(np.count_nonzero(np.asarray(msg.data, dtype=np.int8) == 0))
         area = free_cells * resolution * resolution
@@ -92,32 +87,62 @@ class SlamMonitorNode(Node):
     def _save_map_handler(self, request: SaveMap.Request, response: SaveMap.Response):
         map_path = request.map_path if request.map_path else self._map_save_path
 
-        if not self._slam_save_client.wait_for_service(timeout_sec=5.0):
+        if self._last_map is None:
             response.success = False
-            response.message = '/slam_toolbox/save_map service not available'
+            response.message = 'No map received yet'
             return response
 
-        slam_req = SlamSaveMap.Request()
-        slam_req.name.data = map_path
-
-        future = self._slam_save_client.call_async(slam_req)
-        deadline = time.monotonic() + 10.0
-        while not future.done():
-            if time.monotonic() > deadline:
-                break
-            time.sleep(0.005)
-
-        if not future.done() or future.result() is None:
+        try:
+            pgm_path, yaml_path = self._write_map(self._last_map, map_path)
+        except Exception as e:
             response.success = False
-            response.message = 'slam_toolbox save_map call timed out'
+            response.message = f'Map write failed: {e}'
             return response
 
         response.success = True
         response.message = 'Map saved successfully'
-        response.pgm_path = map_path + '.pgm'
-        response.yaml_path = map_path + '.yaml'
-        self.get_logger().info(f'Map saved to {response.pgm_path}')
+        response.pgm_path = pgm_path
+        response.yaml_path = yaml_path
+        self.get_logger().info(f'Map saved to {pgm_path}')
         return response
+
+    def _write_map(self, map_msg: OccupancyGrid, map_path: str):
+        info = map_msg.info
+        width, height = info.width, info.height
+        resolution = info.resolution
+        ox = info.origin.position.x
+        oy = info.origin.position.y
+
+        data = np.array(map_msg.data, dtype=np.int8).reshape(height, width)
+
+        # ROS occupancy → PGM: free=254, occupied=0, unknown=205
+        pixels = np.full((height, width), 205, dtype=np.uint8)
+        pixels[data == 0] = 254
+        pixels[data == 100] = 0
+        mid = (data > 0) & (data < 100)
+        pixels[mid] = (255 - (data[mid].astype(np.float32) / 100.0) * 254).astype(np.uint8)
+
+        # ROS maps are stored bottom-row-first; PGM is top-row-first
+        pixels = np.flipud(pixels)
+
+        os.makedirs(os.path.dirname(map_path) or '.', exist_ok=True)
+        pgm_path = map_path + '.pgm'
+        with open(pgm_path, 'wb') as f:
+            f.write(f'P5\n{width} {height}\n255\n'.encode())
+            f.write(pixels.tobytes())
+
+        yaml_path = map_path + '.yaml'
+        with open(yaml_path, 'w') as f:
+            f.write(
+                f'image: {os.path.basename(pgm_path)}\n'
+                f'resolution: {resolution}\n'
+                f'origin: [{ox:.6f}, {oy:.6f}, 0.0]\n'
+                f'negate: 0\n'
+                f'occupied_thresh: 0.65\n'
+                f'free_thresh: 0.196\n'
+            )
+
+        return pgm_path, yaml_path
 
 
 def main(args=None):
