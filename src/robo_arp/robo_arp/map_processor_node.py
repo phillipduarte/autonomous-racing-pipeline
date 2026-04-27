@@ -21,7 +21,7 @@ class MapProcessorNode(Node):
 
         if not script_path or not os.path.isfile(script_path):
             response.success = False
-            response.message = 'centerline_script_path not set or file not found'
+            response.message = 'centerline_script_path not set or file not found' + script_path
             return response
 
         map_base = request.pgm_path.replace('.pgm', '')
@@ -33,10 +33,10 @@ class MapProcessorNode(Node):
             seed_px, seed_py = self._meters_to_pixels(
                 map_base + '.yaml', request.seed_x, request.seed_y)
             if seed_px is not None:
-                cmd += ['--seed', str(seed_px), str(seed_py)]
+                cmd += ['--seed', str(seed_py), str(seed_px)]  # script expects row, col
                 self.get_logger().info(
                     f'Seed: map=({request.seed_x:.3f}m, {request.seed_y:.3f}m) '
-                    f'-> pixel=({seed_px}, {seed_py})')
+                    f'-> pixel=(row={seed_py}, col={seed_px})')
             else:
                 self.get_logger().warn('Could not read map YAML — running without seed')
 
