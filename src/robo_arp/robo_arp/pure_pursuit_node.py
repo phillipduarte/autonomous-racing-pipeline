@@ -186,12 +186,15 @@ class PurePursuitNode(Node):
         if n == 0:
             return None
 
+        # TODO: Take in direction (CCW = -, CW = +) from wall follow/coordinator
+        # use that to inform pure pursuit/reinforcement learning direction
+
         # Update closest index
         best_dist = float('inf')
         best_idx = self._closest_idx
-        search_range = min(n, 50)
+        search_range = min(n, 20)
         for i in range(search_range):
-            idx = (self._closest_idx + i) % n
+            idx = (self._closest_idx - i) % n
             px, py = self._path[idx]
             d = math.hypot(px - self._x, py - self._y)
             if d < best_dist:
@@ -200,14 +203,14 @@ class PurePursuitNode(Node):
         self._closest_idx = best_idx
 
         # Find lookahead point
-        for i in range(n):
-            idx = (self._closest_idx + i) % n
+        for i in range(search_range):
+            idx = (self._closest_idx - i) % n
             px, py = self._path[idx]
             if math.hypot(px - self._x, py - self._y) >= lookahead:
                 return self._path[idx]
 
         # Fallback: return the farthest point
-        return self._path[(self._closest_idx + n // 2) % n]
+        return self._path[(self._closest_idx - n // 2) % n]
 
     def _publish_stop(self):
         stop = AckermannDriveStamped()
