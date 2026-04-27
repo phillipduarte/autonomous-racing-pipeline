@@ -282,7 +282,7 @@ class CoordinatorNode(Node):
             pose_msg.pose.pose.orientation.z = sy
             self._initialpose_pub.publish(pose_msg)
             self.get_logger().info('Initial pose published to /initialpose')
-            time.sleep(0.5)
+            time.sleep(3.0)
 
         req = SetActive.Request()
         req.active = True
